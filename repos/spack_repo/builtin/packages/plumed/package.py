@@ -35,6 +35,9 @@ class Plumed(AutotoolsPackage):
 
     version("master", branch="master")
 
+    version("2.10.0", sha256="ca6410d47e91b4e0f953e1a8933f15b05c4681167611ab3b096ab121155f6879")
+    version("2.9.4", sha256="3068ab5e28cbae38b582d128fecac14c820762244d8eb87ad6030f04f96ecd78")
+    version("2.9.3", sha256="0abf3098d11a8720d6f8d0b65df6a8da5ccd013c7b4a8ddbbc86229066d7d640")
     version("2.9.2", sha256="301fbc958374f81d9b8c7a1eac73095f6dded52cce73ce33d64bdbebf51ac63d")
     version("2.9.1", sha256="e24563ad1eb657611918e0c978d9c5212340f128b4f1aa5efbd439a0b2e91b58")
     version("2.9.0", sha256="612d2387416b5f82dd8545709921440370e144fd46cef633654cf0ee43bac5f8")
@@ -138,6 +141,9 @@ class Plumed(AutotoolsPackage):
         values=("none", "cpu", "cuda", "opencl"),
         description="Activates FireArray support",
     )
+    variant(
+            "metatomic", default=False, when="@2.10:", description="Activate metatomic support",
+    )
 
     depends_on("c", type="build")  # generated
     depends_on("cxx", type="build")  # generated
@@ -150,6 +156,7 @@ class Plumed(AutotoolsPackage):
     depends_on("arrayfire", when="arrayfire=cpu")
     depends_on("arrayfire+cuda", when="arrayfire=cuda")
     depends_on("arrayfire+opencl", when="arrayfire=opencl")
+    depends_on("libmetatomic-torch", when="+metatomic")
 
     depends_on("mpi", when="+mpi")
     depends_on("gsl", when="+gsl")
@@ -259,6 +266,10 @@ class Plumed(AutotoolsPackage):
             libaf = "arrayfire:{0}".format(spec.variants["arrayfire"].value)
             extra_libs.append(spec[libaf].libs.search_flags)
 
+        if spec.satisfies("+metatomic"):
+            libmetatomic = spec["libmetatomic-torch"]
+            extra_libs.append(libmetatomic.libs.search_flags)
+
         if extra_libs:
             configure_opts.append("LDFLAGS={0}".format(" ".join(extra_libs)))
 
@@ -270,6 +281,7 @@ class Plumed(AutotoolsPackage):
                 "--enable-af_cpu={0}".format("yes" if "arrayfire=cpu" in spec else "no"),
                 "--enable-af_cuda={0}".format("yes" if "arrayfire=cuda" in spec else "no"),
                 "--enable-af_ocl={0}".format("yes" if "arrayfire=ocl" in spec else "no"),
+                "--enable-metatomic={0}".format("yes" if self.spec.satisfies("+metatomic") else "no"),
             ]
         )
 
