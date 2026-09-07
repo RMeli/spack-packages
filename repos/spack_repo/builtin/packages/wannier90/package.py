@@ -15,7 +15,14 @@ class Wannier90(makefile.MakefilePackage, cmake.CMakePackage):
     Wannier90 is released under the GNU General Public License.
     """
 
-    build_system("makefile", conditional("cmake", when="@4:"), default="cmake")
+    # Wannier90 4 also supports Makefiles
+    # Due to name changes etc, we use CMake for version 4 and above
+    # The Makefile build system for version 4 is left as an exercise for the reader =)
+    build_system(
+        conditional("makefile", when="@:3"),
+        conditional("cmake", when="@4:"),
+        default="cmake",
+    )
 
     homepage = "https://wannier.org"
     url = "https://github.com/wannier-developers/wannier90/archive/v3.1.0.tar.gz"
@@ -27,15 +34,37 @@ class Wannier90(makefile.MakefilePackage, cmake.CMakePackage):
     tags = ["e4s"]
 
     version("develop", branch="develop")
-    version("4.0.2", sha256="2d48b371eefa8b58a6c8088c1bdffc13fe3e761111e15c8566e2ee055d8bcdb0")
-    version("3.1.0", sha256="40651a9832eb93dec20a8360dd535262c261c34e13c41b6755fa6915c936b254")
-    version("3.0.0", sha256="f196e441dcd7b67159a1d09d2d7de2893b011a9f03aab6b30c4703ecbf20fe5b")
-    version("2.1.0", sha256="ee90108d4bc4aa6a1cf16d72abebcb3087cf6c1007d22dda269eb7e7076bddca")
-    version("2.0.1", sha256="05ea7cd421a219ce19d379ad6ae3d9b1a84be4ffb367506ffdfab1e729309e94")
+    version(
+        "4.0.2",
+        sha256="2d48b371eefa8b58a6c8088c1bdffc13fe3e761111e15c8566e2ee055d8bcdb0",
+    )
+    version(
+        "3.1.0",
+        sha256="40651a9832eb93dec20a8360dd535262c261c34e13c41b6755fa6915c936b254",
+    )
+    version(
+        "3.0.0",
+        sha256="f196e441dcd7b67159a1d09d2d7de2893b011a9f03aab6b30c4703ecbf20fe5b",
+    )
+    version(
+        "2.1.0",
+        sha256="ee90108d4bc4aa6a1cf16d72abebcb3087cf6c1007d22dda269eb7e7076bddca",
+    )
+    version(
+        "2.0.1",
+        sha256="05ea7cd421a219ce19d379ad6ae3d9b1a84be4ffb367506ffdfab1e729309e94",
+    )
 
-    variant("shared", default=True, description="Builds a shared version of the library")
+    variant(
+        "shared", default=True, description="Builds a shared version of the library"
+    )
     variant("mpi", default=True, description="Build parallel version of Wannier90")
-    variant("pic", default=True, description="Build position independent code", when="build_system=cmake")
+    variant(
+        "pic",
+        default=True,
+        description="Build position independent code",
+        when="build_system=cmake",
+    )
 
     depends_on("c", type="build")
     depends_on("fortran", type="build")
@@ -45,26 +74,27 @@ class Wannier90(makefile.MakefilePackage, cmake.CMakePackage):
     depends_on("mpi", when="+mpi")
     depends_on("lapack")
     depends_on("blas")
-    
+
     @property
     def libs(self):
-        return find_libraries("libwannier", self.prefix, shared=True, recursive=True)
-    
+        libname = "libwannier90" if self.spec.satisfies("@4:") else "libwannier"
+        return find_libraries(libname, self.prefix, shared=True, recursive=True)
+
     def url_for_version(self, version):
         if version > Version("2"):
             url = "https://github.com/wannier-developers/wannier90/archive/v{0}.tar.gz"
         else:
             url = "https://wannier.org/code/wannier90-{0}.tar.gz"
         return url.format(version)
-    
+
     @run_after("install")
     def install_license(self):
         license_dir = join_path(self.prefix.share, "licenses", "wannier90")
         mkdirp(license_dir)
         install(join_path(self.stage.source_path, "LICENSE"), license_dir)
 
-class CMakeBuilder(cmake.CMakeBuilder):
 
+class CMakeBuilder(cmake.CMakeBuilder):
     def cmake_args(self):
         args = [
             self.define_from_variant("WANNIER90_MPI", "mpi"),
@@ -82,7 +112,6 @@ class CMakeBuilder(cmake.CMakeBuilder):
 
 
 class MakefileBuilder(makefile.MakefileBuilder):
-
     parallel = False
 
     @property
@@ -95,7 +124,7 @@ class MakefileBuilder(makefile.MakefileBuilder):
             if "+shared" in self.spec:
                 targets.append("dynlib")
         if "@4:" in self.spec:
-            targets = ["wannier", "post", "libs", "w90chk2chk", "w90vdw"]
+            targets = ["wannier", "post", "libs", "w90chk2chk", "w90spn2spn", "w90vdw"]
             if "+shared" in self.spec:
                 targets.append("dynlib")
 
@@ -141,7 +170,9 @@ class MakefileBuilder(makefile.MakefileBuilder):
 
         if self.spec.satisfies("%gcc@10:"):
             fflags = ["-fallow-argument-mismatch"]
-            filter_file(r"(^FCOPTS=.*)", r"\1 {0}".format(" ".join(fflags)), self.makefile_name)
+            filter_file(
+                r"(^FCOPTS=.*)", r"\1 {0}".format(" ".join(fflags)), self.makefile_name
+            )
 
         if "@:2 +shared" in self.spec:
             # this is to build a .shared wannier90 library
@@ -214,25 +245,49 @@ class MakefileBuilder(makefile.MakefileBuilder):
         )
 
         install(
-            join_path(self.stage.source_path, "postw90.x"), join_path(self.prefix.bin, "postw90.x")
+            join_path(self.stage.source_path, "postw90.x"),
+            join_path(self.prefix.bin, "postw90.x"),
         )
 
         inst = []
+        if "@4:" in spec:
+            libbase = "wannier90_mpi" if "+mpi" in spec else "wannier90"
+        else:
+            libbase = "wannier"
+
         if "+shared" in spec:
-            inst.append("libwannier." + dso_suffix)
+            if "@4:" in spec:
+                inst.append("lib{0}.so.4".format(libbase))
+            else:
+                inst.append("lib{0}.{1}".format(libbase, dso_suffix))
 
         # version 3 or 2 without the shared variant
         # also has a .a version of the library
         if "@3:" in spec or "~shared" in spec:
-            inst.append("libwannier.a")
+            inst.append("lib{0}.a".format(libbase))
 
         for file in inst:
-            install(join_path(self.stage.source_path, file), join_path(self.prefix.lib, file))
+            install(
+                join_path(self.stage.source_path, file),
+                join_path(self.prefix.lib, file),
+            )
+
+        if "@4:" in spec and "+shared" in spec:
+            os.symlink(
+                "lib{0}.so.4".format(libbase),
+                join_path(self.prefix.lib, "lib{0}.{1}".format(libbase, dso_suffix)),
+            )
 
         install(
             join_path(self.stage.source_path, "w90chk2chk.x"),
             join_path(self.prefix.bin, "w90chk2chk.x"),
         )
+
+        if "@4:" in spec:
+            install(
+                join_path(self.stage.source_path, "w90spn2spn.x"),
+                join_path(self.prefix.bin, "w90spn2spn.x"),
+            )
 
         install(
             join_path(self.stage.source_path, "utility", "w90vdw", "w90vdw.x"),
@@ -246,9 +301,9 @@ class MakefileBuilder(makefile.MakefileBuilder):
             )
 
         install_tree(
-            join_path(self.stage.source_path, "pseudo"), join_path(self.prefix.bin, "pseudo")
+            join_path(self.stage.source_path, "pseudo"),
+            join_path(self.prefix.bin, "pseudo"),
         )
 
         for file in find(join_path(self.stage.source_path, "src/obj"), "*.mod"):
             install(file, self.prefix.modules)
-
