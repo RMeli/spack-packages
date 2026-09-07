@@ -84,12 +84,6 @@ class Wannier90(makefile.MakefilePackage, cmake.CMakePackage):
             url = "https://wannier.org/code/wannier90-{0}.tar.gz"
         return url.format(version)
 
-    @run_after("install")
-    def install_license(self):
-        license_dir = join_path(self.prefix.share, "licenses", "wannier90")
-        mkdirp(license_dir)
-        install(join_path(self.stage.source_path, "LICENSE"), license_dir)
-
 
 class CMakeBuilder(cmake.CMakeBuilder):
     def cmake_args(self):
@@ -243,7 +237,7 @@ class MakefileBuilder(makefile.MakefileBuilder):
         inst = []
 
         if "+shared" in spec:
-            inst.append(f"wannier.{dso_suffix}"
+            inst.append(f"libwannier.{dso_suffix}"
 
         # version 3 or 2 without the shared variant
         # also has a .a version of the library
