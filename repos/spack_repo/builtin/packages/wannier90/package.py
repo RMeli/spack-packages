@@ -237,7 +237,7 @@ class MakefileBuilder(makefile.MakefileBuilder):
         inst = []
 
         if "+shared" in spec:
-            inst.append(f"libwannier.{dso_suffix}"
+            inst.append(f"libwannier.{dso_suffix}")
 
         # version 3 or 2 without the shared variant
         # also has a .a version of the library
