@@ -37,7 +37,7 @@ class Libwignernj(CMakePackage):
     depends_on("c", type="build")
     depends_on("cxx", type="build", when="+cxx-tests")
     depends_on("fortran", type="build", when="+fortran")
-    
+
     depends_on("cmake@3.16:", type="build")
 
     depends_on("mpfr", when="+mpfr")
