@@ -15,11 +15,8 @@ class Wannier90(makefile.MakefilePackage, cmake.CMakePackage):
     Wannier90 is released under the GNU General Public License.
     """
 
-    # Wannier90 4 also supports Makefiles
-    # Due to name changes etc, we use CMake for version 4 and above
-    # The Makefile build system for version 4 is left as an exercise for the reader =)
     build_system(
-        conditional("makefile", when="@:3"),
+        "makefile",
         conditional("cmake", when="@4:"),
         default="cmake",
     )
