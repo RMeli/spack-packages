@@ -97,9 +97,9 @@ class CMakeBuilder(cmake.CMakeBuilder):
             self.define_from_variant("CMAKE_POSITION_INDEPENDENT_CODE", "pic"),
             self.define("WANNIER90_INSTALL", True),
             self.define("WANNIER90_TEST", False),
-            self.define("BLA_SIZEOF_INTEGER", 4),
-            self.define("BLAS_LIBRARIES", ";".join(self.spec["blas"].libs)),
-            self.define("LAPACK_LIBRARIES", ";".join(self.spec["lapack"].libs)),
+            self.define("BLA_SIZEOF_INTEGER", 8 if "+ilp64" in self.spec["blas"] else 4),
+            self.define("BLAS_LIBRARIES", self.spec["blas"].libs.joined(";")),
+            self.define("LAPACK_LIBRARIES", self.spec["lapack"].libs.joined(";")),
         ]
         if "+mpi" in self.spec:
             args.append(self.define("MPI_Fortran_COMPILER", self.spec["mpi"].mpifc))
