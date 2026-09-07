@@ -4,7 +4,7 @@
 
 import os
 
-from spack_repo.builtin.build_systems import makefile, cmake
+from spack_repo.builtin.build_systems import cmake, makefile
 
 from spack.package import *
 
@@ -55,9 +55,7 @@ class Wannier90(makefile.MakefilePackage, cmake.CMakePackage):
         sha256="05ea7cd421a219ce19d379ad6ae3d9b1a84be4ffb367506ffdfab1e729309e94",
     )
 
-    variant(
-        "shared", default=True, description="Builds a shared version of the library"
-    )
+    variant("shared", default=True, description="Builds a shared version of the library")
     variant("mpi", default=True, description="Build parallel version of Wannier90")
     variant(
         "pic",
@@ -102,9 +100,9 @@ class CMakeBuilder(cmake.CMakeBuilder):
             self.define_from_variant("CMAKE_POSITION_INDEPENDENT_CODE", "pic"),
             self.define("WANNIER90_INSTALL", True),
             self.define("WANNIER90_TEST", False),
-            self.define("BLA_SIZEOF_INTEGER", 4),
-            self.define("BLAS_LIBRARIES", ";".join(self.spec["blas"].libs)),
-            self.define("LAPACK_LIBRARIES", ";".join(self.spec["lapack"].libs)),
+            self.define("BLA_SIZEOF_INTEGER", 8 if "+ilp64" in self.spec["blas"] else 4),
+            self.define("BLAS_LIBRARIES", self.spec["blas"].libs.joined(";")),
+            self.define("LAPACK_LIBRARIES", self.spec["lapack"].libs.joined(";")),
         ]
         if "+mpi" in self.spec:
             args.append(self.define("MPI_Fortran_COMPILER", self.spec["mpi"].mpifc))
@@ -166,9 +164,7 @@ class MakefileBuilder(makefile.MakefileBuilder):
 
         if self.spec.satisfies("%gcc@10:"):
             fflags = ["-fallow-argument-mismatch"]
-            filter_file(
-                r"(^FCOPTS=.*)", r"\1 {0}".format(" ".join(fflags)), self.makefile_name
-            )
+            filter_file(r"(^FCOPTS=.*)", r"\1 {0}".format(" ".join(fflags)), self.makefile_name)
 
         if "@:2 +shared" in self.spec:
             # this is to build a .shared wannier90 library
