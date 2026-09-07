@@ -75,8 +75,7 @@ class Wannier90(makefile.MakefilePackage, cmake.CMakePackage):
 
     @property
     def libs(self):
-        libname = "libwannier90" if self.spec.satisfies("@4:") else "libwannier"
-        return find_libraries(libname, self.prefix, shared=True, recursive=True)
+        return find_libraries("libwannier", self.prefix, shared=True, recursive=True)
 
     def url_for_version(self, version):
         if version > Version("2"):
