@@ -4,7 +4,7 @@
 
 import os
 
-from spack_repo.builtin.build_systems import makefile, cmake
+from spack_repo.builtin.build_systems import cmake, makefile
 
 from spack.package import *
 
@@ -52,9 +52,7 @@ class Wannier90(makefile.MakefilePackage, cmake.CMakePackage):
         sha256="05ea7cd421a219ce19d379ad6ae3d9b1a84be4ffb367506ffdfab1e729309e94",
     )
 
-    variant(
-        "shared", default=True, description="Builds a shared version of the library"
-    )
+    variant("shared", default=True, description="Builds a shared version of the library")
     variant("mpi", default=True, description="Build parallel version of Wannier90")
     variant(
         "pic",
@@ -167,9 +165,7 @@ class MakefileBuilder(makefile.MakefileBuilder):
 
         if self.spec.satisfies("%gcc@10:"):
             fflags = ["-fallow-argument-mismatch"]
-            filter_file(
-                r"(^FCOPTS=.*)", r"\1 {0}".format(" ".join(fflags)), self.makefile_name
-            )
+            filter_file(r"(^FCOPTS=.*)", r"\1 {0}".format(" ".join(fflags)), self.makefile_name)
 
         if "@:2 +shared" in self.spec:
             # this is to build a .shared wannier90 library
