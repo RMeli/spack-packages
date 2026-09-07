@@ -15,8 +15,11 @@ class Wannier90(makefile.MakefilePackage, cmake.CMakePackage):
     Wannier90 is released under the GNU General Public License.
     """
 
+    # Use Makefile for @:3 and CMake for @4:
+    # Makefile is technically supported for @4: but due to several changes,
+    # this is not currently implemented/supported by the Spack package
     build_system(
-        "makefile",
+        conditional("makefile", when="@:3"),
         conditional("cmake", when="@4:"),
         default="cmake",
     )
@@ -118,10 +121,6 @@ class MakefileBuilder(makefile.MakefileBuilder):
             targets = ["lib", "wannier", "post", "w90chk2chk", "w90vdw", "w90pov"]
         if "@3" in self.spec:
             targets = ["wannier", "post", "lib", "w90chk2chk", "w90vdw"]
-            if "+shared" in self.spec:
-                targets.append("dynlib")
-        if "@4:" in self.spec:
-            targets = ["wannier", "post", "libs", "w90chk2chk", "w90spn2spn", "w90vdw"]
             if "+shared" in self.spec:
                 targets.append("dynlib")
 
@@ -247,21 +246,14 @@ class MakefileBuilder(makefile.MakefileBuilder):
         )
 
         inst = []
-        if "@4:" in spec:
-            libbase = "wannier90_mpi" if "+mpi" in spec else "wannier90"
-        else:
-            libbase = "wannier"
 
         if "+shared" in spec:
-            if "@4:" in spec:
-                inst.append("lib{0}.so.4".format(libbase))
-            else:
-                inst.append("lib{0}.{1}".format(libbase, dso_suffix))
+            inst.append(f"wannier.{dso_suffix}"
 
         # version 3 or 2 without the shared variant
         # also has a .a version of the library
         if "@3:" in spec or "~shared" in spec:
-            inst.append("lib{0}.a".format(libbase))
+            inst.append("libwannier.a")
 
         for file in inst:
             install(
@@ -269,22 +261,10 @@ class MakefileBuilder(makefile.MakefileBuilder):
                 join_path(self.prefix.lib, file),
             )
 
-        if "@4:" in spec and "+shared" in spec:
-            os.symlink(
-                "lib{0}.so.4".format(libbase),
-                join_path(self.prefix.lib, "lib{0}.{1}".format(libbase, dso_suffix)),
-            )
-
         install(
             join_path(self.stage.source_path, "w90chk2chk.x"),
             join_path(self.prefix.bin, "w90chk2chk.x"),
         )
-
-        if "@4:" in spec:
-            install(
-                join_path(self.stage.source_path, "w90spn2spn.x"),
-                join_path(self.prefix.bin, "w90spn2spn.x"),
-            )
 
         install(
             join_path(self.stage.source_path, "utility", "w90vdw", "w90vdw.x"),
